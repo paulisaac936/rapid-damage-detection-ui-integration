@@ -136,6 +136,21 @@ function setupChangeDetection() {
 
       var result = await analyzeChangeDetection(preFile, postFile);
       renderChangeDetectionResults(result);
+      
+      // Fetch and display ChangeFormer mask and heatmap
+      try {
+        const maskResult = await fetchChangeFormerMask();
+        const heatmapResult = await fetchChangeFormerHeatmap();
+        
+        if (maskResult.status === 'success') {
+          document.getElementById('cd-mask').src = maskResult.mask;
+        }
+        if (heatmapResult.status === 'success') {
+          document.getElementById('cd-heatmap').src = heatmapResult.heatmap;
+        }
+      } catch (vizError) {
+        console.warn('Failed to load ChangeFormer visualizations:', vizError);
+      }
     } catch (error) {
       showError('change-detection-error', 'Error: ' + error.message);
       console.error('Change detection error:', error);

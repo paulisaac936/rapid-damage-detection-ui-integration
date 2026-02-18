@@ -4,6 +4,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
+import os
+import glob
+from PIL import Image
+import numpy as np
+import io
+import base64
 
 # Internal imports
 from database import engine, Base, get_db
@@ -13,6 +19,9 @@ from routing import router as routing_engine
 from pdf import generate_pdf_report
 from change_detection import ai_model
 from damage_estimation import damage_estimator
+
+# Path to ChangeFormer predictions
+CHANGEFORMER_MASKS_DIR = os.path.join(os.path.dirname(__file__), '..', 'ChangeFormer-main', 'samples_DSIFN', 'predict_ChangeFormerV6')
 
 # Initialize DB Tables
 Base.metadata.create_all(bind=engine)
@@ -234,6 +243,75 @@ async def combined_damage_report(
             "status": "error",
             "error": str(e)
         }
+
+# 2.5 ChangeFormer Visualization Endpoints
+@app.get("/visualize/changeformer/mask")
+def get_changeformer_mask():
+    """
+    Return the latest ChangeFormer prediction mask as base64
+    """
+    try:
+        # Get all PNG files
+        mask_files = glob.glob(os.path.join(CHANGEFORMER_MASKS_DIR, '*.png'))
+        if not mask_files:
+            return {"status": "error", "error": "No mask files found"}
+        
+        # Sort by filename (assuming numeric prefixes)
+        mask_files.sort(key=lambda x: int(os.path.basename(x).split('_')[0]))
+        latest_mask = mask_files[-1]  # Get the last (highest number)
+        
+        # Load and encode
+        mask_img = Image.open(latest_mask).convert('L')  # Grayscale
+        buffered = io.BytesIO()
+        mask_img.save(buffered, format="PNG")
+        mask_base64 = f"data:image/png;base64,{base64.b64encode(buffered.getvalue()).decode()}"
+        
+        return {
+            "status": "success",
+            "mask": mask_base64,
+            "filename": os.path.basename(latest_mask)
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+@app.get("/visualize/changeformer/heatmap")
+def get_changeformer_heatmap():
+    """
+    Generate and return a colored heatmap from the latest ChangeFormer mask
+    """
+    try:
+        # Get all PNG files
+        mask_files = glob.glob(os.path.join(CHANGEFORMER_MASKS_DIR, '*.png'))
+        if not mask_files:
+            return {"status": "error", "error": "No mask files found"}
+        
+        # Sort by filename
+        mask_files.sort(key=lambda x: int(os.path.basename(x).split('_')[0]))
+        latest_mask = mask_files[-1]
+        
+        # Load mask
+        mask_img = Image.open(latest_mask).convert('L')
+        mask_np = np.array(mask_img, dtype=np.float32) / 255.0
+        
+        # Create heatmap: red for high change, blue for low
+        heatmap = np.zeros((mask_np.shape[0], mask_np.shape[1], 3), dtype=np.uint8)
+        heatmap[..., 0] = (mask_np * 255).astype(np.uint8)  # Red channel
+        heatmap[..., 1] = 0  # Green
+        heatmap[..., 2] = ((1 - mask_np) * 255).astype(np.uint8)  # Blue channel
+        
+        # Convert to PIL and encode
+        heatmap_img = Image.fromarray(heatmap, 'RGB')
+        buffered = io.BytesIO()
+        heatmap_img.save(buffered, format="PNG")
+        heatmap_base64 = f"data:image/png;base64,{base64.b64encode(buffered.getvalue()).decode()}"
+        
+        return {
+            "status": "success",
+            "heatmap": heatmap_base64,
+            "filename": os.path.basename(latest_mask)
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
 
 # 3. Routing
 @app.get("/route/compute")

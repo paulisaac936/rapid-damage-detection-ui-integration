@@ -125,6 +125,42 @@ async function estimateDamage(image) {
   return data;
 }
 
+/**
+ * Fetch ChangeFormer Mask
+ * GET /visualize/changeformer/mask
+ * 
+ * @returns {Promise<Object>} Backend response with mask image
+ */
+async function fetchChangeFormerMask() {
+  const response = await fetch(`${getApiBaseUrl()}/visualize/changeformer/mask`);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  const data = await response.json();
+  return data;
+}
+
+/**
+ * Fetch ChangeFormer Heatmap
+ * GET /visualize/changeformer/heatmap
+ * 
+ * @returns {Promise<Object>} Backend response with heatmap image
+ */
+async function fetchChangeFormerHeatmap() {
+  const response = await fetch(`${getApiBaseUrl()}/visualize/changeformer/heatmap`);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  const data = await response.json();
+  return data;
+}
+
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -134,5 +170,7 @@ if (typeof module !== 'undefined' && module.exports) {
     analyzeChangeDetection,
     analyzeSegmentation,
     estimateDamage,
+    fetchChangeFormerMask,
+    fetchChangeFormerHeatmap,
   };
 }

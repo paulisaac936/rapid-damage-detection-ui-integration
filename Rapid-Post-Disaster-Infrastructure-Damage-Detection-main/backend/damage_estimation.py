@@ -112,14 +112,21 @@ class DamageEstimator:
         return (edges - edges.min()) / (edges.max() - edges.min() + 1e-6)
     
     def _convolve2d(self, img: np.ndarray, kernel: np.ndarray) -> np.ndarray:
-        """Simple 2D convolution"""
+        """Simple 2D convolution with SAME padding"""
         h, w = img.shape
         kh, kw = kernel.shape
-        output = np.zeros((h - kh + 1, w - kw + 1))
         
-        for i in range(h - kh + 1):
-            for j in range(w - kw + 1):
-                output[i, j] = np.sum(img[i:i+kh, j:j+kw] * kernel)
+        # Pad the image for SAME convolution
+        pad_h = kh // 2
+        pad_w = kw // 2
+        padded_img = np.pad(img, ((pad_h, pad_h), (pad_w, pad_w)), mode='constant', constant_values=0)
+        
+        # Output has same size as input
+        output = np.zeros((h, w))
+        
+        for i in range(h):
+            for j in range(w):
+                output[i, j] = np.sum(padded_img[i:i+kh, j:j+kw] * kernel)
         
         return output
     
