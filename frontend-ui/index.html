@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ResQ Sentinel – AI Damage Console</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="./styles/neumorphism.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar__logo">
+          <div class="sidebar__orb"></div>
+          <div class="sidebar__title">
+            <span class="sidebar__label">ResQ Sentinel</span>
+            <span class="sidebar__subtitle">AI Damage Console</span>
+          </div>
+        </div>
+        <div class="sidebar__section">
+          <div class="sidebar__section-label">Analysis Modes</div>
+          <button class="nav-chip nav-chip--active" data-panel="change-detection">
+            <span class="nav-chip__title">Change Detection</span>
+            <span class="nav-chip__subtitle">Pre / Post satellite</span>
+          </button>
+          <button class="nav-chip" data-panel="segmentation">
+            <span class="nav-chip__title">Single Image Segmentation</span>
+            <span class="nav-chip__subtitle">Damage heatmap</span>
+          </button>
+          <button class="nav-chip" data-panel="damage-estimation">
+            <span class="nav-chip__title">Damage Estimation</span>
+            <span class="nav-chip__subtitle">Metrics only</span>
+          </button>
+        </div>
+        <div class="sidebar__section">
+          <div class="sidebar__section-label">Connection</div>
+          <label class="field-label" for="api-base-input">Backend URL</label>
+          <div class="field-inline">
+            <input
+              id="api-base-input"
+              type="text"
+              class="text-input"
+              placeholder="http://localhost:8000"
+            />
+            <button id="apply-api-base" class="pill-button">Set</button>
+          </div>
+          <div id="connection-status" class="connection-pill">Idle</div>
+        </div>
+        <footer class="sidebar__footer">
+          <div class="sidebar__hint">
+            Model: <span class="badge">ChangeFormerV6 / DamageEstimator</span>
+          </div>
+        </footer>
+      </aside>
+
+      <main class="workspace">
+        <header class="workspace__header">
+          <div>
+            <h1 class="workspace__title">Satellite Damage Analysis</h1>
+            <p class="workspace__subtitle">
+              Upload imagery, fire the AI pipeline, and inspect real inference output.
+            </p>
+          </div>
+          <div class="workspace__status">
+            <span id="health-indicator" class="status-dot status-dot--unknown"></span>
+            <span id="health-text" class="status-text">Health: Unknown</span>
+          </div>
+        </header>
+
+        <!-- Change Detection Panel -->
+        <section
+          id="panel-change-detection"
+          class="panel panel--active"
+          aria-label="Change Detection Panel"
+        >
+          <div class="panel__grid">
+            <section class="card card--surface">
+              <header class="card__header">
+                <div>
+                  <h2 class="card__title">Pre / Post Imagery</h2>
+                  <p class="card__subtitle">
+                    Provide pre- and post-disaster satellite tiles. Images are streamed directly to
+                    the backend.
+                  </p>
+                </div>
+              </header>
+              <div class="card__body card__body--split">
+                <div class="upload-column">
+                  <div class="upload-slot" data-role="pre">
+                    <div class="upload-label">
+                      <span class="upload-title">Pre-Disaster Image</span>
+                      <span class="upload-subtitle">Before event</span>
+                    </div>
+                    <label class="dropzone" for="pre-image-input">
+                      <input
+                        id="pre-image-input"
+                        type="file"
+                        accept="image/*"
+                        class="dropzone__input"
+                      />
+                      <img id="pre-dropzone-preview" class="dropzone__preview" alt="Pre-disaster preview" />
+                      <div class="dropzone__placeholder">
+                        <div class="dropzone__icon">⭳</div>
+                        <div class="dropzone__text">
+                          Drop file here or <span class="dropzone__accent">browse</span>
+                        </div>
+                        <div class="dropzone__meta" id="pre-image-meta">No file selected</div>
+                      </div>
+                    </label>
+                  </div>
+
+                  <div class="upload-slot" data-role="post">
+                    <div class="upload-label">
+                      <span class="upload-title">Post-Disaster Image</span>
+                      <span class="upload-subtitle">After event</span>
+                    </div>
+                    <label class="dropzone" for="post-image-input">
+                      <input
+                        id="post-image-input"
+                        type="file"
+                        accept="image/*"
+                        class="dropzone__input"
+                      />
+                      <img id="post-dropzone-preview" class="dropzone__preview" alt="Post-disaster preview" />
+                      <div class="dropzone__placeholder">
+                        <div class="dropzone__icon">⭳</div>
+                        <div class="dropzone__text">
+                          Drop file here or <span class="dropzone__accent">browse</span>
+                        </div>
+                        <div class="dropzone__meta" id="post-image-meta">No file selected</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="run-column">
+                  <div class="run-column__summary">
+                    <h3 class="run-column__title">Pipeline</h3>
+                    <ol class="pipeline-list">
+                      <li>Stream images to FastAPI backend</li>
+                      <li>Run ChangeFormerV6 inference</li>
+                      <li>Receive heatmap + metrics</li>
+                    </ol>
+                  </div>
+                  <button id="run-change-detection" class="primary-button">
+                    Run Change Detection
+                  </button>
+                  <div id="change-detection-error" class="error-pill" hidden></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="card card--surface">
+              <header class="card__header">
+                <div>
+                  <h2 class="card__title">AI Output</h2>
+                  <p class="card__subtitle">
+                    Values and visualizations are rendered exactly as returned by the backend.
+                  </p>
+                </div>
+              </header>
+              <div class="card__body card__body--vertical">
+                <div class="metrics-row">
+                  <div class="metric-chip">
+                    <div class="metric-label">Damage %</div>
+                    <div id="cd-damage" class="metric-value">–</div>
+                  </div>
+                  <div class="metric-chip">
+                    <div class="metric-label">Change Detected %</div>
+                    <div id="cd-change" class="metric-value">–</div>
+                  </div>
+                  <div class="metric-chip">
+                    <div class="metric-label">Confidence</div>
+                    <div id="cd-confidence" class="metric-value">–</div>
+                  </div>
+                  <div class="metric-chip metric-chip--tag">
+                    <div class="metric-label">Model</div>
+                    <div id="cd-model" class="metric-tag">–</div>
+                  </div>
+                  <div class="metric-chip metric-chip--tag">
+                    <div class="metric-label">Status</div>
+                    <div id="cd-status" class="metric-tag">–</div>
+                  </div>
+                </div>
+
+                <div class="visual-grid">
+                  <div class="visual-cell">
+                    <div class="visual-label">Pre-Event</div>
+                    <img id="preview-pre" class="visual-image" alt="Pre-disaster preview" />
+                  </div>
+                  <div class="visual-cell">
+                    <div class="visual-label">Post-Event</div>
+                    <img id="preview-post" class="visual-image" alt="Post-disaster preview" />
+                  </div>
+                  <div class="visual-cell visual-cell--wide">
+                    <div class="visual-label">Change Heatmap (From Backend)</div>
+                    <img
+                      id="cd-mask"
+                      class="visual-image visual-image--accent"
+                      alt="Change detection mask"
+                    />
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <!-- Single Image Segmentation Panel -->
+        <section
+          id="panel-segmentation"
+          class="panel"
+          aria-label="Single Image Segmentation Panel"
+        >
+          <div class="panel__grid panel__grid--single">
+            <section class="card card--surface">
+              <header class="card__header">
+                <div>
+                  <h2 class="card__title">Single Image Segmentation</h2>
+                  <p class="card__subtitle">
+                    Assess a single tile for damage segmentation and zone-level insights.
+                  </p>
+                </div>
+              </header>
+              <div class="card__body card__body--split">
+                <div class="upload-column">
+                  <div class="upload-slot">
+                    <div class="upload-label">
+                      <span class="upload-title">Satellite Image</span>
+                      <span class="upload-subtitle">Any supported tile</span>
+                    </div>
+                    <label class="dropzone" for="seg-image-input">
+                      <input
+                        id="seg-image-input"
+                        type="file"
+                        accept="image/*"
+                        class="dropzone__input"
+                      />
+                      <img id="seg-dropzone-preview" class="dropzone__preview" alt="Satellite preview" />
+                      <div class="dropzone__placeholder">
+                        <div class="dropzone__icon">⭳</div>
+                        <div class="dropzone__text">
+                          Drop file here or <span class="dropzone__accent">browse</span>
+                        </div>
+                        <div class="dropzone__meta" id="seg-image-meta">No file selected</div>
+                      </div>
+                    </label>
+                  </div>
+
+                  <button id="run-segmentation" class="primary-button">
+                    Run Segmentation
+                  </button>
+                  <div id="segmentation-error" class="error-pill" hidden></div>
+                </div>
+
+                <div class="segmentation-output">
+                  <div class="metrics-column">
+                    <div class="metric-line">
+                      <span>Total Damage</span>
+                      <span id="seg-total">–</span>
+                    </div>
+                    <div class="metric-line">
+                      <span>Buildings</span>
+                      <span id="seg-buildings">–</span>
+                    </div>
+                    <div class="metric-line">
+                      <span>Infrastructure</span>
+                      <span id="seg-infra">–</span>
+                    </div>
+                    <div class="metric-line">
+                      <span>Debris</span>
+                      <span id="seg-debris">–</span>
+                    </div>
+                    <div class="metric-line">
+                      <span>Severity</span>
+                      <span id="seg-severity">–</span>
+                    </div>
+                    <div class="metric-line">
+                      <span>Confidence</span>
+                      <span id="seg-confidence">–</span>
+                    </div>
+                    <div class="metric-line metric-line--wide">
+                      <span>Message</span>
+                      <span id="seg-message" class="metric-message">–</span>
+                    </div>
+                  </div>
+                  <div class="visual-cell visual-cell--stacked">
+                    <div class="visual-label">Damage Visualization</div>
+                    <img
+                      id="seg-visual"
+                      class="visual-image visual-image--accent"
+                      alt="Segmentation visualization"
+                    />
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <!-- Damage Estimation Panel -->
+        <section
+          id="panel-damage-estimation"
+          class="panel"
+          aria-label="Damage Estimation Panel"
+        >
+          <div class="panel__grid panel__grid--single">
+            <section class="card card--surface">
+              <header class="card__header">
+                <div>
+                  <h2 class="card__title">Comprehensive Damage Estimation</h2>
+                  <p class="card__subtitle">
+                    Run the full estimation stack on a single image for metrics and zone analysis.
+                  </p>
+                </div>
+              </header>
+              <div class="card__body card__body--split">
+                <div class="upload-column">
+                  <div class="upload-slot">
+                    <div class="upload-label">
+                      <span class="upload-title">Satellite Image</span>
+                      <span class="upload-subtitle">Same tile as used in backend docs</span>
+                    </div>
+                    <label class="dropzone" for="est-image-input">
+                      <input
+                        id="est-image-input"
+                        type="file"
+                        accept="image/*"
+                        class="dropzone__input"
+                      />
+                      <div class="dropzone__icon">⭳</div>
+                      <div class="dropzone__text">
+                        Drop file here or <span class="dropzone__accent">browse</span>
+                      </div>
+                      <div class="dropzone__meta" id="est-image-meta">No file selected</div>
+                    </label>
+                  </div>
+
+                  <button id="run-estimation" class="primary-button">
+                    Run Damage Estimation
+                  </button>
+                  <div id="estimation-error" class="error-pill" hidden></div>
+                </div>
+
+                <div class="segmentation-output">
+                  <div class="metrics-column">
+                    <div class="metric-line">
+                      <span>Total Damage</span>
+                      <span id="est-total">–</span>
+                    </div>
+                    <div class="metric-line">
+                      <span>Buildings</span>
+                      <span id="est-buildings">–</span>
+                    </div>
+                    <div class="metric-line">
+                      <span>Infrastructure</span>
+                      <span id="est-infra">–</span>
+                    </div>
+                    <div class="metric-line">
+                      <span>Debris</span>
+                      <span id="est-debris">–</span>
+                    </div>
+                    <div class="metric-line">
+                      <span>Severity</span>
+                      <span id="est-severity">–</span>
+                    </div>
+                    <div class="metric-line">
+                      <span>Confidence</span>
+                      <span id="est-confidence">–</span>
+                    </div>
+                    <div class="metric-line">
+                      <span>Damaged Zones</span>
+                      <span id="est-damaged-zones">–</span>
+                    </div>
+                    <div class="metric-line">
+                      <span>Safe Zones</span>
+                      <span id="est-safe-zones">–</span>
+                    </div>
+                    <div class="metric-line metric-line--wide">
+                      <span>Message</span>
+                      <span id="est-message" class="metric-message">–</span>
+                    </div>
+                  </div>
+                  <div class="visual-cell visual-cell--stacked">
+                    <div class="visual-label">Estimator Visualization</div>
+                    <img
+                      id="est-visual"
+                      class="visual-image visual-image--accent"
+                      alt="Damage estimation visualization"
+                    />
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Load modules in order -->
+    <script src="./js/api.js"></script>
+    <script src="./js/upload.js"></script>
+    <script src="./js/render.js"></script>
+    <script src="./js/app.js"></script>
+  </body>
+</html>
+
