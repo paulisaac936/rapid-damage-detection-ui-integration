@@ -137,16 +137,18 @@ function setupChangeDetection() {
       var result = await analyzeChangeDetection(preFile, postFile);
       renderChangeDetectionResults(result);
       
-      // Fetch and display ChangeFormer mask and heatmap
+      // Fetch and display ChangeFormer mask and heatmap for this upload
       try {
-        const maskResult = await fetchChangeFormerMask();
-        const heatmapResult = await fetchChangeFormerHeatmap();
-        
-        if (maskResult.status === 'success') {
-          document.getElementById('cd-mask').src = maskResult.mask;
-        }
-        if (heatmapResult.status === 'success') {
-          document.getElementById('cd-heatmap').src = heatmapResult.heatmap;
+        const maskFilename = result.mask_filename;
+        if (maskFilename) {
+          const maskResult = await fetchChangeFormerMask(maskFilename);
+          const heatmapResult = await fetchChangeFormerHeatmap(maskFilename);
+          if (maskResult.status === 'success') {
+            document.getElementById('cd-mask').src = maskResult.mask;
+          }
+          if (heatmapResult.status === 'success') {
+            document.getElementById('cd-heatmap').src = heatmapResult.heatmap;
+          }
         }
       } catch (vizError) {
         console.warn('Failed to load ChangeFormer visualizations:', vizError);

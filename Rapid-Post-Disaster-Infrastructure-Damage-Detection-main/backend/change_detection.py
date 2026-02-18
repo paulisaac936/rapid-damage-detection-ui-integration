@@ -131,11 +131,24 @@ class ChangeDetectionAI:
                 mask_img = self._create_mask_visualization(change_map)
                 mask_base64 = self._image_to_base64(mask_img)
                 
+                # Save mask to disk with unique filename
+                import uuid
+                mask_filename = f"mask_{uuid.uuid4().hex}.png"
+                mask_path = os.path.join(
+                    Path(__file__).parent.parent,
+                    'ChangeFormer-main',
+                    'samples_DSIFN',
+                    'predict_ChangeFormerV6',
+                    mask_filename
+                )
+                mask_img.save(mask_path)
+                
                 return {
                     'change_detected': change_percentage,
                     'damage_percentage': change_percentage,
                     'confidence': max_confidence,
                     'mask_data': mask_base64,
+                    'mask_filename': mask_filename,
                     'model': 'ChangeFormerV6',
                     'status': 'COMPLETED'
                 }
@@ -163,11 +176,24 @@ class ChangeDetectionAI:
             mask_img = self._create_mask_visualization(change_mask)
             mask_base64 = self._image_to_base64(mask_img)
             
+            # Save mask to disk with unique filename
+            import uuid
+            mask_filename = f"mask_{uuid.uuid4().hex}.png"
+            mask_path = os.path.join(
+                Path(__file__).parent.parent,
+                'ChangeFormer-main',
+                'samples_DSIFN',
+                'predict_ChangeFormerV6',
+                mask_filename
+            )
+            mask_img.save(mask_path)
+            
             return {
                 'change_detected': change_percentage,
                 'damage_percentage': change_percentage,
                 'confidence': min(confidence * 1.2, 1.0),  # Scale confidence
                 'mask_data': mask_base64,
+                'mask_filename': mask_filename,
                 'model': 'DifferenceAnalysis',
                 'status': 'COMPLETED'
             }

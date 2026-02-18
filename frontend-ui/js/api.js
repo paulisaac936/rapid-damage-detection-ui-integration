@@ -131,14 +131,14 @@ async function estimateDamage(image) {
  * 
  * @returns {Promise<Object>} Backend response with mask image
  */
-async function fetchChangeFormerMask() {
-  const response = await fetch(`${getApiBaseUrl()}/visualize/changeformer/mask`);
-
+async function fetchChangeFormerMask(filename) {
+  let url = `${getApiBaseUrl()}/visualize/changeformer/mask`;
+  if (filename) url += `?filename=${encodeURIComponent(filename)}`;
+  const response = await fetch(url);
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(`HTTP ${response.status}: ${errorText}`);
   }
-
   const data = await response.json();
   return data;
 }
@@ -149,14 +149,14 @@ async function fetchChangeFormerMask() {
  * 
  * @returns {Promise<Object>} Backend response with heatmap image
  */
-async function fetchChangeFormerHeatmap() {
-  const response = await fetch(`${getApiBaseUrl()}/visualize/changeformer/heatmap`);
-
+async function fetchChangeFormerHeatmap(filename) {
+  let url = `${getApiBaseUrl()}/visualize/changeformer/heatmap`;
+  if (filename) url += `?filename=${encodeURIComponent(filename)}`;
+  const response = await fetch(url);
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(`HTTP ${response.status}: ${errorText}`);
   }
-
   const data = await response.json();
   return data;
 }

@@ -245,70 +245,64 @@ async def combined_damage_report(
         }
 
 # 2.5 ChangeFormer Visualization Endpoints
+from fastapi import Query
+
 @app.get("/visualize/changeformer/mask")
-def get_changeformer_mask():
+def get_changeformer_mask(filename: str = Query(None)):
     """
-    Return the latest ChangeFormer prediction mask as base64
+    Return a ChangeFormer prediction mask as base64, by filename
     """
     try:
-        # Get all PNG files
-        mask_files = glob.glob(os.path.join(CHANGEFORMER_MASKS_DIR, '*.png'))
-        if not mask_files:
-            return {"status": "error", "error": "No mask files found"}
-        
-        # Sort by filename (assuming numeric prefixes)
-        mask_files.sort(key=lambda x: int(os.path.basename(x).split('_')[0]))
-        latest_mask = mask_files[-1]  # Get the last (highest number)
-        
-        # Load and encode
-        mask_img = Image.open(latest_mask).convert('L')  # Grayscale
+        if filename:
+            mask_path = os.path.join(CHANGEFORMER_MASKS_DIR, filename)
+            if not os.path.exists(mask_path):
+                return {"status": "error", "error": "Mask file not found"}
+        else:
+            mask_files = glob.glob(os.path.join(CHANGEFORMER_MASKS_DIR, '*.png'))
+            if not mask_files:
+                return {"status": "error", "error": "No mask files found"}
+            mask_path = mask_files[-1]
+        mask_img = Image.open(mask_path).convert('L')
         buffered = io.BytesIO()
         mask_img.save(buffered, format="PNG")
         mask_base64 = f"data:image/png;base64,{base64.b64encode(buffered.getvalue()).decode()}"
-        
         return {
             "status": "success",
             "mask": mask_base64,
-            "filename": os.path.basename(latest_mask)
+            "filename": os.path.basename(mask_path)
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
 
 @app.get("/visualize/changeformer/heatmap")
-def get_changeformer_heatmap():
+def get_changeformer_heatmap(filename: str = Query(None)):
     """
-    Generate and return a colored heatmap from the latest ChangeFormer mask
+    Generate and return a colored heatmap from a ChangeFormer mask by filename
     """
     try:
-        # Get all PNG files
-        mask_files = glob.glob(os.path.join(CHANGEFORMER_MASKS_DIR, '*.png'))
-        if not mask_files:
-            return {"status": "error", "error": "No mask files found"}
-        
-        # Sort by filename
-        mask_files.sort(key=lambda x: int(os.path.basename(x).split('_')[0]))
-        latest_mask = mask_files[-1]
-        
-        # Load mask
-        mask_img = Image.open(latest_mask).convert('L')
+        if filename:
+            mask_path = os.path.join(CHANGEFORMER_MASKS_DIR, filename)
+            if not os.path.exists(mask_path):
+                return {"status": "error", "error": "Mask file not found"}
+        else:
+            mask_files = glob.glob(os.path.join(CHANGEFORMER_MASKS_DIR, '*.png'))
+            if not mask_files:
+                return {"status": "error", "error": "No mask files found"}
+            mask_path = mask_files[-1]
+        mask_img = Image.open(mask_path).convert('L')
         mask_np = np.array(mask_img, dtype=np.float32) / 255.0
-        
-        # Create heatmap: red for high change, blue for low
         heatmap = np.zeros((mask_np.shape[0], mask_np.shape[1], 3), dtype=np.uint8)
-        heatmap[..., 0] = (mask_np * 255).astype(np.uint8)  # Red channel
-        heatmap[..., 1] = 0  # Green
-        heatmap[..., 2] = ((1 - mask_np) * 255).astype(np.uint8)  # Blue channel
-        
-        # Convert to PIL and encode
+        heatmap[..., 0] = (mask_np * 255).astype(np.uint8)
+        heatmap[..., 1] = 0
+        heatmap[..., 2] = ((1 - mask_np) * 255).astype(np.uint8)
         heatmap_img = Image.fromarray(heatmap, 'RGB')
         buffered = io.BytesIO()
         heatmap_img.save(buffered, format="PNG")
         heatmap_base64 = f"data:image/png;base64,{base64.b64encode(buffered.getvalue()).decode()}"
-        
         return {
             "status": "success",
             "heatmap": heatmap_base64,
-            "filename": os.path.basename(latest_mask)
+            "filename": os.path.basename(mask_path)
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
