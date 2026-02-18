@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 import os
 
 # Use environment variable or default to local PostGIS instance
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/resq_db")
+DATABASE_URL = "sqlite:///./disaster.db"
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

@@ -5,9 +5,9 @@
 
 :root {
   /* Base Colors - Subtle light blue tint */
-  --bg-primary: #e2e8f0;
-  --bg-secondary: #d4dce8;
-  --bg-tertiary: #c8d2e0;
+  --bg-primary: #c4d4e7;
+  --bg-secondary: #dbe9ff;
+  --bg-tertiary: #b1d0fc;
   --text-primary: #2d3748;
   --text-secondary: #4a5568;
   --text-muted: #718096;
